@@ -222,7 +222,6 @@
             const ffmpegBaseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm';
             
             try {
-                // Скачиваем скрипты и превращаем их во временные безопасные локальные ссылки
                 await ffmpeg.load({
                     coreURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.js`, 'text/javascript'),
                     wasmURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.wasm`, 'application/wasm'),
