@@ -218,16 +218,22 @@
         const downloadLink = document.getElementById('download-link');
 
         const loadFFmpeg = async () => {
-            const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+            const coreBaseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+            const ffmpegBaseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm';
+            
             try {
+                // Скачиваем скрипты и превращаем их во временные безопасные локальные ссылки
                 await ffmpeg.load({
-                    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-                    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+                    coreURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.js`, 'text/javascript'),
+                    wasmURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+                    classWorkerURL: await toBlobURL(`${ffmpegBaseURL}/worker.js`, 'text/javascript')
                 });
+                
                 dropZone.classList.remove('disabled');
                 dropText.innerHTML = dict[currentLang].readyText;
             } catch (error) {
-                dropText.innerHTML = dict[currentLang].errorCore;
+                dropText.innerHTML = `<span style='color: red; font-size: 14px;'>Ошибка: ${error.message || error.toString()}</span>`;
+                console.error(error);
             }
         };
 
