@@ -158,7 +158,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
 
     <script>
-        const { FFmpeg } = window.FFmpeg;
+
+        const { FFmpeg } = window.FFmpegWASM;
         const { fetchFile, toBlobURL } = window.FFmpegUtil;
 
         const themeToggle = document.getElementById('theme-toggle');
