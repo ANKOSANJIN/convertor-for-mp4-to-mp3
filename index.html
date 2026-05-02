@@ -278,7 +278,6 @@
 
         const loadFFmpeg = async () => {
             try {
-                // ИСПОЛЬЗУЕМ CDN (UNPKG)
                 const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
                 await ffmpeg.load({
                     coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
@@ -352,7 +351,6 @@
             } else { alert("Браузер не поддерживает отправку файлов."); }
         };
 
-        // --- Обработка событий ползунков с фиксом перекрытия ---
         trimStart.oninput = () => {
             trimStart.style.zIndex = "3"; trimEnd.style.zIndex = "2";
             if (parseFloat(trimStart.value) >= parseFloat(trimEnd.value)) trimStart.value = parseFloat(trimEnd.value) - 0.1;
@@ -364,7 +362,6 @@
             updateSliderUI();
         };
 
-        // --- ГИБРИДНЫЙ DRAG & DROP ДЛЯ МОБИЛЬНЫХ ---
         dropZone.onclick = () => fileInput.click();
         fileInput.onchange = () => { if (fileInput.files.length) processFile(fileInput.files[0]); };
 
