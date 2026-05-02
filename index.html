@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/coi-serviceworker/0.1.7/coi-serviceworker.min.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title data-i18n="title">ANKO - Аудио из видео</title>
+    <title data-i18n="title">ANKO - Видео в аудио</title>
     <style>
-         /* РАЗРАБОТАНО ANKO */
+        /*РАЗРАБОТАНО ANKO*/
         * { box-sizing: border-box; }
         body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%); color: #333; display: flex; flex-direction: column; min-height: 100vh; transition: background 0.4s ease, color 0.4s ease; }
         .header { background-color: #8b0000; color: white; display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); z-index: 10; }
@@ -33,44 +33,53 @@
         .drop-zone:hover, .drop-zone.dragover { border-color: #8b0000; background-color: #fff5f5; transform: scale(1.02); }
         .drop-zone-text { font-size: 18px; color: #666; pointer-events: none; transition: color 0.4s; }
         .drop-zone.disabled { opacity: 0.6; cursor: not-allowed; pointer-events: none; }
+        
+        .supported-info { margin-top: 10px; font-size: 12px; color: #777; text-align: center; }
+
+        .settings-area { display: none; margin-bottom: 20px; background: rgba(0,0,0,0.03); padding: 20px; border-radius: 12px; border: 1px solid #eee; }
+        .settings-row { display: flex; gap: 15px; margin-bottom: 20px; width: 100%; }
+        .settings-item { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+        .settings-item label { font-size: 12px; font-weight: bold; color: #8b0000; text-align: left; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .custom-select-wrapper { position: relative; user-select: none; width: 100%; }
+        .hidden-select { display: none !important; }
+        .custom-select { position: relative; border: 1px solid #ccc; border-radius: 10px; background: white; cursor: pointer; transition: all 0.3s ease; }
+        .custom-select-trigger { display: flex; align-items: center; justify-content: space-between; padding: 10px 15px; font-size: 14px; font-weight: bold; color: #333; min-height: 42px; }
+        .custom-select-trigger:after { content: ""; width: 7px; height: 7px; border-bottom: 2px solid #8b0000; border-right: 2px solid #8b0000; transform: rotate(45deg); transition: 0.3s; margin-bottom: 3px; }
+        .custom-select.open { border-color: #8b0000; box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1); }
+        .custom-select.open .custom-select-trigger:after { transform: rotate(-135deg); margin-bottom: -3px; }
+        
+        .custom-options { position: absolute; top: 100%; left: 0; right: 0; border: 1px solid #eee; background: white; margin-top: 8px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); z-index: 100; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; }
+        .custom-select.open .custom-options { opacity: 1; visibility: visible; transform: translateY(0); }
+        .custom-option { padding: 12px 15px; font-size: 14px; font-weight: 500; color: #555; cursor: pointer; transition: 0.2s; }
+        .custom-option:hover { background-color: #fff5f5; color: #8b0000; }
+        .custom-option.selected { color: white; background-color: #8b0000; }
 
         .process-area { margin-top: 20px; width: 100%; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: none; box-sizing: border-box; transition: background 0.4s; }
-        .status-text { font-weight: bold; color: #8b0000; margin-bottom: 10px; text-align: center; transition: color 0.4s; }
-        
-        .progress-bar-bg { width: 100%; height: 12px; background-color: #e0e0e0; border-radius: 6px; overflow: hidden; margin-bottom: 15px; position: relative; }
-        .progress-bar-fill { 
-            height: 100%; width: 0%; 
-            background: linear-gradient(90deg, #8b0000 0%, #ff4d4d 50%, #8b0000 100%); 
-            background-size: 200% 100%;
-            border-radius: 6px;
-            animation: flow 2s linear infinite, pulseGlow 1.5s ease-in-out infinite;
-            transition: width 0.3s ease;
-        }
+        .progress-section { display: none; margin-top: 10px; }
+        .status-text { font-weight: bold; color: #8b0000; margin-bottom: 10px; text-align: center; }
+        .progress-bar-bg { width: 100%; height: 12px; background-color: #e0e0e0; border-radius: 6px; overflow: hidden; margin-bottom: 15px; }
+        .progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #8b0000 0%, #ff4d4d 50%, #8b0000 100%); background-size: 200% 100%; animation: flow 2s linear infinite; transition: width 0.3s ease; }
 
         @keyframes flow { 0% { background-position: 200% 0; } 100% { background-position: 0% 0; } }
-        @keyframes pulseGlow { 0% { box-shadow: 0 0 5px rgba(139, 0, 0, 0.2); } 50% { box-shadow: 0 0 20px rgba(255, 77, 77, 0.4); } 100% { box-shadow: 0 0 5px rgba(139, 0, 0, 0.2); } }
 
         .trim-section { margin: 15px 0; padding: 15px 12px; background: rgba(0,0,0,0.03); border-radius: 10px; border: 1px solid #eee; }
         .trim-values { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; color: #8b0000; margin-bottom: 10px; }
-        .range-slider { position: relative; width: 100%; height: 6px; background: #ddd; border-radius: 3px; margin: 15px 0; }
+        
+        .range-slider { position: relative; width: calc(100% - 20px); margin: 15px auto; height: 6px; background: #ddd; border-radius: 3px; }
         .track-highlight { position: absolute; height: 100%; background: #8b0000; border-radius: 3px; z-index: 1; }
-        .range-slider input[type="range"] { 
-            position: absolute; width: 100%; height: 0; -webkit-appearance: none; pointer-events: none; outline: none; top: 50%; transform: translateY(-50%); background: none; z-index: 2; 
-        }
-        input[type="range"]::-webkit-slider-thumb { 
-            -webkit-appearance: none; pointer-events: all; width: 20px; height: 20px; border-radius: 50%; 
-            background: #fff; border: 3px solid #8b0000; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); 
-        }
+        .range-slider input[type="range"] { position: absolute; width: calc(100% + 20px); height: 0; -webkit-appearance: none; pointer-events: none; outline: none; top: 50%; transform: translateY(-50%); background: none; z-index: 2; left: -10px; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: all; width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 3px solid #8b0000; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
         .btn-group { display: flex; gap: 10px; margin-bottom: 15px; }
-        .download-btn, .share-btn { flex: 1; border: none; padding: 12px 10px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; text-align: center; text-decoration: none; transition: 0.2s; color: white; }
+        .download-btn, .share-btn { flex: 1; border: none; padding: 12px 10px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; text-align: center; text-decoration: none; color: white; transition: 0.2s; }
         .download-btn { background-color: #28a745; }
         .download-btn:hover { background-color: #218838; }
         .share-btn { background-color: #007bff; }
         .share-btn:hover { background-color: #0069d9; }
 
         audio { width: 100%; outline: none; margin-bottom: 15px; }
-        .lang-select { margin-top: 40px; background-color: transparent; color: #555; border: 2px solid #ccc; padding: 8px 36px 8px 16px; border-radius: 20px; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg fill="%23555" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); background-repeat: no-repeat; background-position: right 8px center; }
+        .footer-controls { margin-top: 40px; width: 180px; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(3px); }
         .modal-overlay.active { display: flex; animation: fadeIn 0.2s ease; }
@@ -88,20 +97,30 @@
         body.dark-theme .icon-sun { opacity: 0; transform: rotate(90deg) scale(0.5); }
         body.dark-theme .icon-moon { opacity: 1; transform: rotate(0) scale(1); }
         body.dark-theme .drop-zone { background-color: rgba(40, 40, 40, 0.8); border-color: #555; }
-        body.dark-theme .process-area, body.dark-theme .modal-content, body.dark-theme .trim-section { background: #222; border-color: #444; }
-        body.dark-theme .range-slider { background: #444; }
-        body.dark-theme .range-slider .track-highlight { background: #ff6b6b; }
-        body.dark-theme .status-text, body.dark-theme .instructions h2, body.dark-theme .modal-title { color: #ff6b6b; }
+        body.dark-theme .process-area, body.dark-theme .modal-content, body.dark-theme .trim-section, body.dark-theme .settings-area { background: #222; border-color: #444; }
+        body.dark-theme .custom-select { background: #333; border-color: #555; }
+        body.dark-theme .custom-select-trigger { color: #eee; }
+        body.dark-theme .custom-select-trigger:after { border-color: #ff6b6b; }
+        body.dark-theme .custom-options { background: #222; border-color: #444; }
+        body.dark-theme .custom-option { color: #ccc; }
+        body.dark-theme .custom-option:hover { background-color: #3d1a1a; color: #ff6b6b; }
+        body.dark-theme .status-text, body.dark-theme .instructions h2, body.dark-theme .modal-title, body.dark-theme .settings-item label { color: #ff6b6b; }
         body.dark-theme .instructions ol { color: #ccc; }
+        body.dark-theme .range-slider { background: #444; }
+        body.dark-theme .track-highlight { background: #ff6b6b; }
         body.dark-theme input[type="range"]::-webkit-slider-thumb { border-color: #ff6b6b; background: #222; }
 
-        @media (max-width: 768px) { 
-            .converter-wrapper { flex-direction: column; text-align: center; } 
-            .instructions { max-width: 100%; } 
-            .drop-zone-container { max-width: 100%; } 
-            .process-area { max-width: 100%; }
-            .btn-group { flex-direction: column; }
-            .trim-values { font-size: 11px; }
+        @media (max-width: 768px) {
+            .header { flex-direction: column; gap: 15px; padding: 15px 20px; text-align: center; }
+            .header-controls { width: 100%; justify-content: center; }
+            .main-content { padding: 20px 15px; }
+            .converter-wrapper { flex-direction: column; gap: 25px; align-items: center; }
+            .instructions { max-width: 100%; width: 100%; }
+            .settings-row { flex-direction: column; gap: 15px; }
+            .settings-item { width: 100%; }
+            .btn-group { flex-direction: column; gap: 12px; }
+            .download-btn, .share-btn { width: 100%; }
+            .footer-controls { width: 100%; max-width: 300px; }
         }
     </style>
 </head>
@@ -111,16 +130,8 @@
         <div class="logo">ANKO</div>
         <div class="header-controls">
             <button class="theme-toggle" id="theme-toggle" title="Сменить тему">
-                <svg class="icon-sun" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                    <circle cx="12" cy="12" r="5"></circle>
-                    <line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line>
-                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                    <line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line>
-                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                </svg>
-                <svg class="icon-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                </svg>
+                <svg class="icon-sun" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                <svg class="icon-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
             </button>
             <button class="support-btn" id="open-support-btn" data-i18n="supportBtn">Поддержать автора</button>
         </div>
@@ -132,7 +143,7 @@
                 <h2 data-i18n="howItWorks">Как это работает?</h2>
                 <ol>
                     <li data-i18n="step1">Выберите видеофайл или просто перетащите его в зону справа.</li>
-                    <li data-i18n="step2">Дождитесь завершения автоматического извлечения звука.</li>
+                    <li data-i18n="step2">Настройте желаемый формат и битрейт для извлечения.</li>
                     <li data-i18n="step3">Обрежьте лишнее, прослушайте и сохраните результат.</li>
                 </ol>
                 <p style="font-size: 13px; color: #888;" data-i18n="privacyNote">* Обработка происходит на вашем устройстве, видео не загружается в интернет.</p>
@@ -143,16 +154,43 @@
                     <span class="drop-zone-text" id="drop-text" data-i18n="loadingCore">Загрузка ядра...</span>
                     <input type="file" id="file-input" accept="video/*" style="display: none;">
                 </div>
+                <div class="supported-info" data-i18n="supportedFormats">Поддерживаются: MP4, MOV, AVI, MKV, WEBM</div>
 
                 <div class="process-area" id="process-area">
-                    <div class="status-text" id="status-text" data-i18n="initText">Инициализация...</div>
-                    <div class="progress-bar-bg">
-                        <div class="progress-bar-fill" id="progress-bar"></div>
+                    <div id="settings-section" class="settings-area">
+                        <div class="settings-row">
+                            <div class="settings-item">
+                                <label data-i18n="labelFormat">Формат аудио</label>
+                                <div class="custom-select-wrapper">
+                                    <select id="output-format" class="hidden-select">
+                                        <option value="mp3" selected>MP3</option>
+                                        <option value="wav">WAV</option>
+                                        <option value="aac">AAC</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="settings-item">
+                                <label data-i18n="labelBitrate">Битрейт</label>
+                                <div class="custom-select-wrapper">
+                                    <select id="output-bitrate" class="hidden-select">
+                                        <option value="128">128 kbps</option>
+                                        <option value="192" selected>192 kbps</option>
+                                        <option value="256">256 kbps</option>
+                                        <option value="320">320 kbps</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="modal-btn btn-primary" id="start-convert-btn" data-i18n="startConvert">Начать извлечение</button>
+                    </div>
+
+                    <div id="progress-section" class="progress-section">
+                        <div class="status-text" id="status-text">Инициализация...</div>
+                        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-bar"></div></div>
                     </div>
 
                     <div id="result-container" style="display: none;">
                         <audio id="audio-player" controls></audio>
-                        
                         <div class="trim-section">
                             <div class="trim-values">
                                 <span><span data-i18n="startPos">Начало</span>: <b id="start-val">0:00</b></span>
@@ -160,29 +198,29 @@
                             </div>
                             <div class="range-slider">
                                 <div class="track-highlight" id="track-highlight"></div>
-                                <input type="range" id="trim-start" step="0.1" value="0">
-                                <input type="range" id="trim-end" step="0.1" value="0">
+                                <input type="range" id="trim-start" step="0.1">
+                                <input type="range" id="trim-end" step="0.1">
                             </div>
-                            <button class="modal-btn btn-primary" id="apply-trim-btn" style="margin-top: 15px; margin-bottom: 0;" data-i18n="applyTrim">Применить обрезку</button>
+                            <button class="modal-btn btn-primary" id="apply-trim-btn" data-i18n="applyTrim">Применить обрезку</button>
                         </div>
-
                         <div class="btn-group">
-                            <a id="download-link" href="#" download="audio.mp3" style="text-decoration: none; flex: 1;">
-                                <button class="download-btn" data-i18n="downloadBtn">Скачать MP3</button>
-                            </a>
+                            <a id="download-link" href="#" style="text-decoration: none; flex: 1;"><button class="download-btn" data-i18n="downloadBtn">Скачать файл</button></a>
                             <button class="share-btn" id="share-btn" data-i18n="shareBtn">Поделиться</button>
                         </div>
-                        
-                        <button class="modal-btn btn-secondary" id="reset-btn" style="margin-top: 15px;" data-i18n="convertAnother">Конвертировать другой файл</button>
+                        <button class="modal-btn btn-secondary" id="reset-btn" data-i18n="convertAnother">Конвертировать другой файл</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <select class="lang-select" id="lang-select">
-            <option value="ru">Русский (RU)</option>
-            <option value="en">English (EN)</option>
-        </select>
+        <div class="footer-controls">
+            <div class="custom-select-wrapper">
+                <select id="lang-select" class="hidden-select">
+                    <option value="ru" selected>Русский (RU)</option>
+                    <option value="en">English (EN)</option>
+                </select>
+            </div>
+        </div>
     </main>
 
     <div class="modal-overlay" id="support-modal">
@@ -207,41 +245,71 @@
     <script>
         const { FFmpeg } = window.FFmpegWASM;
         const { fetchFile, toBlobURL } = window.FFmpegUtil;
-        const themeToggle = document.getElementById('theme-toggle');
-        if (localStorage.getItem('anko_theme') === 'dark') document.body.classList.add('dark-theme');
-        themeToggle.addEventListener('click', () => {
-            document.body.classList.toggle('dark-theme');
-            localStorage.setItem('anko_theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
-        });
+        const ffmpeg = new FFmpeg();
+
+        let currentLang = 'ru', currentBlob = null, originalFileName = "audio", duration = 0, selectedFile = null;
 
         const dict = {
             ru: { 
                 title: "ANKO - Аудио из видео", supportBtn: "Поддержать автора", howItWorks: "Как это работает?", 
-                step1: "Выберите видеофайл или просто перетащите его в зону справа.", step2: "Дождитесь завершения автоматического извлечения звука.", 
+                step1: "Выберите видеофайл или просто перетащите его в зону справа.", step2: "Настройте желаемый формат и битрейт для извлечения.", 
                 step3: "Обрежьте лишнее, прослушайте и сохраните результат.", privacyNote: "* Обработка происходит на вашем устройстве, видео не загружается в интернет.", 
                 loadingCore: "Загрузка ядра...", readyText: "Нажмите или перетащите <br><b>видео файл</b>", 
-                initText: "Инициализация...", downloadBtn: "Скачать MP3", shareBtn: "Поделиться", supportTitle: "Поддержать проект", donateLink: "Отправить донат", 
-                showQR: "Показать QR код", scanQR: "Отсканируйте код:", backBtn: "Назад", errorCore: "Ошибка ядра.", 
-                reading: "Чтение: ", extracting: "Извлечение: ", finishing: "Готово! Сохранение...", applyTrim: "Применить обрезку",
-                success: "Аудио готово!", errorConvert: "Ошибка конвертации.", convertAnother: "Конвертировать другой",
-                startPos: "Начало", endPos: "Конец", trimming: "Обрезаем..."
+                initText: "Инициализация...", downloadBtn: "Скачать файл", shareBtn: "Поделиться", supportTitle: "Поддержать проект", donateLink: "Отправить донат",
+                showQR: "Показать QR код", scanQR: "Отсканируйте код:", backBtn: "Назад",
+                applyTrim: "Применить обрезку", success: "Аудио готово!", errorConvert: "Ошибка конвертации.", convertAnother: "Конвертировать другой",
+                startPos: "Начало", endPos: "Конец", trimming: "Обрезаем...", labelFormat: "Формат аудио", labelBitrate: "Битрейт", startConvert: "Начать извлечение",
+                supportedFormats: "Поддерживаются: MP4, MOV, AVI, MKV, WEBM"
             },
             en: { 
                 title: "ANKO - Audio from Video", supportBtn: "Support Author", howItWorks: "How it works?", 
-                step1: "Select a video file or simply drag it to the zone.", step2: "Wait for the automatic audio extraction.", 
-                step3: "Trim the excess, listen and save the result.", privacyNote: "* Processing happens on your device, the video is not uploaded.", 
+                step1: "Select a video file or simply drag it to the zone.", step2: "Set desired format and bitrate for extraction.", 
+                step3: "Trim the excess, listen and save the result.", privacyNote: "* Processing happens on your device locally.", 
                 loadingCore: "Loading core...", readyText: "Click or drag <br><b>video file</b>", 
-                initText: "Initializing...", downloadBtn: "Download MP3", shareBtn: "Share", supportTitle: "Support the project", donateLink: "Donate", 
-                showQR: "Show QR code", scanQR: "Scan code:", backBtn: "Back", errorCore: "Core error.", 
-                reading: "Reading: ", extracting: "Extracting: ", finishing: "Finishing...", applyTrim: "Apply Trim",
-                success: "Success!", errorConvert: "Conversion error.", convertAnother: "Convert another",
-                startPos: "Start", endPos: "End", trimming: "Trimming..."
+                initText: "Initializing...", downloadBtn: "Download File", shareBtn: "Share", supportTitle: "Support the project", donateLink: "Donate",
+                showQR: "Show QR code", scanQR: "Scan code:", backBtn: "Back",
+                applyTrim: "Apply Trim", success: "Success!", errorConvert: "Conversion error.", convertAnother: "Convert another",
+                startPos: "Start", endPos: "End", trimming: "Trimming...", labelFormat: "Audio Format", labelBitrate: "Bitrate", startConvert: "Start Extraction",
+                supportedFormats: "Supported: MP4, MOV, AVI, MKV, WEBM"
             }
         };
 
-        let currentLang = 'ru', currentBlob = null, originalFileName = "audio", duration = 0;
-        const langSelect = document.getElementById('lang-select');
-        const ffmpeg = new FFmpeg();
+        function initCustomSelects() {
+            document.querySelectorAll(".custom-select").forEach(el => el.remove());
+            document.querySelectorAll(".custom-select-wrapper").forEach(wrapper => {
+                const select = wrapper.querySelector("select");
+                const options = Array.from(select.querySelectorAll("option"));
+                const customSelect = document.createElement("div");
+                customSelect.className = "custom-select";
+                const trigger = document.createElement("div");
+                trigger.className = "custom-select-trigger";
+                trigger.innerHTML = `<span>${options.find(o => o.value === select.value).textContent}</span>`;
+                const optionsContainer = document.createElement("div");
+                optionsContainer.className = "custom-options";
+                options.forEach(opt => {
+                    const customOpt = document.createElement("div");
+                    customOpt.className = `custom-option ${opt.value === select.value ? 'selected' : ''}`;
+                    customOpt.textContent = opt.textContent;
+                    customOpt.onclick = () => {
+                        select.value = opt.value;
+                        select.dispatchEvent(new Event('change'));
+                        customSelect.classList.remove("open");
+                        trigger.querySelector("span").textContent = opt.textContent;
+                        optionsContainer.querySelectorAll(".custom-option").forEach(el => el.classList.remove("selected"));
+                        customOpt.classList.add("selected");
+                    };
+                    optionsContainer.appendChild(customOpt);
+                });
+                trigger.onclick = (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll(".custom-select").forEach(s => { if(s !== customSelect) s.classList.remove("open")});
+                    customSelect.classList.toggle("open");
+                };
+                customSelect.appendChild(trigger);
+                customSelect.appendChild(optionsContainer);
+                wrapper.appendChild(customSelect);
+            });
+        }
 
         function updateLanguage() {
             document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -251,31 +319,30 @@
                     else el.innerHTML = dict[currentLang][key];
                 }
             });
-            if (!dropZone.classList.contains('disabled')) dropText.innerHTML = dict[currentLang].readyText;
+            if (dropZone.style.display !== 'none') dropText.innerHTML = dict[currentLang].readyText;
+            initCustomSelects();
         }
-        langSelect.addEventListener('change', (e) => { currentLang = e.target.value; updateLanguage(); });
 
-        const openSupportBtn = document.getElementById('open-support-btn'), supportModal = document.getElementById('support-modal'), closeModalBtn = document.getElementById('close-modal-btn'), showQrBtn = document.getElementById('show-qr-btn'), backToBtns = document.getElementById('back-to-btns'), modalMainView = document.getElementById('modal-main-view'), modalQrView = document.getElementById('modal-qr-view');
-        openSupportBtn.onclick = () => { supportModal.classList.add('active'); modalMainView.style.display = 'block'; modalQrView.style.display = 'none'; };
-        closeModalBtn.onclick = () => supportModal.classList.remove('active');
-        showQrBtn.onclick = () => { modalMainView.style.display = 'none'; modalQrView.style.display = 'block'; };
-        backToBtns.onclick = () => { modalQrView.style.display = 'none'; modalMainView.style.display = 'block'; };
+        document.getElementById('lang-select').addEventListener('change', (e) => {
+            currentLang = e.target.value;
+            updateLanguage();
+        });
 
-        const dropZone = document.getElementById('drop-zone'), dropText = document.getElementById('drop-text'), fileInput = document.getElementById('file-input'), processArea = document.getElementById('process-area'), statusText = document.getElementById('status-text'), progressBar = document.getElementById('progress-bar'), resultContainer = document.getElementById('result-container'), audioPlayer = document.getElementById('audio-player'), downloadLink = document.getElementById('download-link');
-        const trimStart = document.getElementById('trim-start'), trimEnd = document.getElementById('trim-end'), startVal = document.getElementById('start-val'), endVal = document.getElementById('end-val'), highlight = document.getElementById('track-highlight');
+        const supportModal = document.getElementById('support-modal'), modalMainView = document.getElementById('modal-main-view'), modalQrView = document.getElementById('modal-qr-view');
+        document.getElementById('open-support-btn').onclick = () => { supportModal.classList.add('active'); modalMainView.style.display = 'block'; modalQrView.style.display = 'none'; };
+        document.getElementById('close-modal-btn').onclick = () => supportModal.classList.remove('active');
+        document.getElementById('show-qr-btn').onclick = () => { modalMainView.style.display = 'none'; modalQrView.style.display = 'block'; };
+        document.getElementById('back-to-btns').onclick = () => { modalQrView.style.display = 'none'; modalMainView.style.display = 'block'; };
 
-        const formatTime = (s) => {
-            const min = Math.floor(s / 60), sec = Math.floor(s % 60);
-            return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+        document.getElementById('share-btn').onclick = async () => {
+            if (!currentBlob) return;
+            const ext = document.getElementById('output-format').value;
+            const mimeTypes = { mp3: 'audio/mpeg', wav: 'audio/wav', aac: 'audio/aac' };
+            const file = new File([currentBlob], `${originalFileName}.${ext}`, { type: mimeTypes[ext] });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try { await navigator.share({ files: [file], title: 'ANKO Audio' }); } catch (e) { if(e.name !== 'AbortError') alert("Ошибка."); }
+            } else alert("Не поддерживается браузером.");
         };
-
-        function updateSliderUI() {
-            const min = parseFloat(trimStart.value), max = parseFloat(trimEnd.value);
-            highlight.style.left = (min / duration * 100) + "%";
-            highlight.style.width = ((max - min) / duration * 100) + "%";
-            startVal.textContent = formatTime(min);
-            endVal.textContent = formatTime(max);
-        }
 
         const loadFFmpeg = async () => {
             try {
@@ -285,101 +352,109 @@
                     wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
                 });
                 dropZone.classList.remove('disabled');
-                dropText.innerHTML = dict[currentLang].readyText;
-            } catch (e) { dropText.innerHTML = `<span style='color: red;'>${dict[currentLang].errorCore}</span>`; }
+                updateLanguage();
+            } catch (e) { dropText.innerHTML = "Ошибка!"; }
         };
 
+        const dropZone = document.getElementById('drop-zone'), dropText = document.getElementById('drop-text'), fileInput = document.getElementById('file-input'), processArea = document.getElementById('process-area'), statusText = document.getElementById('status-text'), progressBar = document.getElementById('progress-bar'), resultContainer = document.getElementById('result-container'), audioPlayer = document.getElementById('audio-player'), downloadLink = document.getElementById('download-link');
+        const trimStart = document.getElementById('trim-start'), trimEnd = document.getElementById('trim-end'), startVal = document.getElementById('start-val'), endVal = document.getElementById('end-val'), highlight = document.getElementById('track-highlight');
+
         async function processFile(file) {
-            if (!file.type.startsWith('video/')) { alert("Пожалуйста, выберите видеофайл."); return; }
+            selectedFile = file;
             originalFileName = file.name.substring(0, file.name.lastIndexOf('.'));
-            dropZone.classList.add('disabled');
+            dropZone.style.display = 'none';
+            document.querySelector('.supported-info').style.display = 'none';
             processArea.style.display = 'block';
-            resultContainer.style.display = 'none';
-
-            try {
-                await ffmpeg.writeFile('input.mp4', await fetchFile(file));
-                ffmpeg.on('progress', ({ progress }) => {
-                    progressBar.style.width = `${Math.round(progress * 100)}%`;
-                    statusText.textContent = `${dict[currentLang].extracting} ${Math.round(progress * 100)}%`;
-                });
-
-                await ffmpeg.exec(['-i', 'input.mp4', '-vn', '-q:a', '0', 'temp.mp3']);
-                const data = await ffmpeg.readFile('temp.mp3');
-                updateAudioResult(data.buffer);
-
-            } catch (error) {
-                statusText.textContent = dict[currentLang].errorConvert;
-                statusText.style.color = 'red';
-                dropZone.classList.remove('disabled');
-            } finally { ffmpeg.off('progress'); }
+            document.getElementById('settings-section').style.display = 'block';
         }
 
-        function updateAudioResult(buffer) {
+        document.getElementById('start-convert-btn').onclick = async () => {
+            document.getElementById('settings-section').style.display = 'none';
+            document.getElementById('progress-section').style.display = 'block';
+            const ext = document.getElementById('output-format').value;
+            const bitrate = document.getElementById('output-bitrate').value;
+            await ffmpeg.writeFile('in', await fetchFile(selectedFile));
+            ffmpeg.on('progress', ({ progress }) => {
+                progressBar.style.width = `${progress * 100}%`;
+                statusText.textContent = `Конвертация... ${Math.round(progress * 100)}%`;
+            });
+            let args = ['-i', 'in', '-vn'];
+            if (ext !== 'wav') args.push('-b:a', `${bitrate}k`);
+            args.push(`out.${ext}`);
+            await ffmpeg.exec(args);
+            const data = await ffmpeg.readFile(`out.${ext}`);
+            updateAudioResult(data.buffer, ext);
+        };
+
+        function updateAudioResult(buffer, ext) {
             if (currentBlob) URL.revokeObjectURL(audioPlayer.src);
-            currentBlob = new Blob([buffer], { type: 'audio/mp3' });
+            const mimeTypes = { mp3: 'audio/mp3', wav: 'audio/wav', aac: 'audio/aac' };
+            currentBlob = new Blob([buffer], { type: mimeTypes[ext] });
             const url = URL.createObjectURL(currentBlob);
-            
             audioPlayer.src = url;
             downloadLink.href = url;
-            downloadLink.download = `${originalFileName}_anko.mp3`;
-
+            downloadLink.download = `${originalFileName}_anko.${ext}`;
             audioPlayer.onloadedmetadata = () => {
                 duration = audioPlayer.duration;
                 trimStart.max = duration; trimEnd.max = duration;
                 trimStart.value = 0; trimEnd.value = duration;
                 updateSliderUI();
-                
-                statusText.textContent = dict[currentLang].success;
                 resultContainer.style.display = 'block';
-                progressBar.style.width = '100%';
+                statusText.textContent = dict[currentLang].success;
             };
         }
 
+        function updateSliderUI() {
+            const min = parseFloat(trimStart.value), max = parseFloat(trimEnd.value);
+            highlight.style.left = (min / duration * 100) + "%";
+            highlight.style.width = ((max - min) / duration * 100) + "%";
+            const fmt = (s) => `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;
+            startVal.textContent = fmt(min); endVal.textContent = fmt(max);
+        }
+
         document.getElementById('apply-trim-btn').onclick = async () => {
+            const ext = document.getElementById('output-format').value;
             statusText.textContent = dict[currentLang].trimming;
-            
-            await ffmpeg.writeFile('temp.mp3', await fetchFile(currentBlob));
-            await ffmpeg.exec(['-i', 'temp.mp3', '-ss', trimStart.value, '-to', trimEnd.value, '-c', 'copy', 'out.mp3']);
-            
-            const data = await ffmpeg.readFile('out.mp3');
-            updateAudioResult(data.buffer);
-        };
 
-        document.getElementById('share-btn').onclick = async () => {
-            if (navigator.share && currentBlob) {
-                const file = new File([currentBlob], `${originalFileName}.mp3`, { type: 'audio/mp3' });
-                await navigator.share({ files: [file], title: 'ANKO Audio' });
-            } else { alert("Браузер не поддерживает отправку файлов."); }
-        };
+            try {
+                const inputName = `temp_input.${ext}`;
+                const outputName = `trimmed_output.${ext}`;
 
-        trimStart.oninput = () => {
-            trimStart.style.zIndex = "3"; trimEnd.style.zIndex = "2";
-            if (parseFloat(trimStart.value) >= parseFloat(trimEnd.value)) trimStart.value = parseFloat(trimEnd.value) - 0.1;
-            updateSliderUI();
-        };
-        trimEnd.oninput = () => {
-            trimEnd.style.zIndex = "3"; trimStart.style.zIndex = "2";
-            if (parseFloat(trimEnd.value) <= parseFloat(trimStart.value)) trimEnd.value = parseFloat(trimStart.value) + 0.1;
-            updateSliderUI();
-        };
+                await ffmpeg.writeFile(inputName, await fetchFile(currentBlob));
 
-        dropZone.onclick = () => fileInput.click();
-        fileInput.onchange = () => { if (fileInput.files.length) processFile(fileInput.files[0]); };
+                await ffmpeg.exec([
+                    '-i', inputName,
+                    '-ss', trimStart.value.toString(),
+                    '-to', trimEnd.value.toString(),
+                    '-c', 'copy',
+                    outputName
+                ]);
 
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            if (!dropZone.classList.contains('disabled')) dropZone.classList.add('dragover');
-        });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            if (!dropZone.classList.contains('disabled') && e.dataTransfer.files.length) {
-                processFile(e.dataTransfer.files[0]);
+                const data = await ffmpeg.readFile(outputName);
+                
+                updateAudioResult(data.buffer, ext);
+
+                await ffmpeg.deleteFile(inputName);
+                await ffmpeg.deleteFile(outputName);
+
+            } catch (e) {
+                console.error(e);
+                statusText.textContent = dict[currentLang].errorConvert;
+                statusText.style.color = 'red';
             }
-        });
+        };
 
+        trimStart.oninput = () => { if(parseFloat(trimStart.value) >= parseFloat(trimEnd.value)) trimStart.value = trimEnd.value - 0.1; updateSliderUI(); };
+        trimEnd.oninput = () => { if(parseFloat(trimEnd.value) <= parseFloat(trimStart.value)) trimEnd.value = parseFloat(trimStart.value) + 0.1; updateSliderUI(); };
+        dropZone.onclick = () => fileInput.click();
+        fileInput.onchange = () => { if(fileInput.files.length) processFile(fileInput.files[0]); };
+        window.onclick = () => document.querySelectorAll(".custom-select").forEach(s => s.classList.remove("open"));
         document.getElementById('reset-btn').onclick = () => location.reload();
+        document.getElementById('theme-toggle').onclick = () => {
+            document.body.classList.toggle('dark-theme');
+            localStorage.setItem('anko_theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
+        };
+        if (localStorage.getItem('anko_theme') === 'dark') document.body.classList.add('dark-theme');
         loadFFmpeg();
     </script>
 </body>
